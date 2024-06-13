@@ -1,30 +1,5 @@
-client.ts
-import * as net from 'net';
-
-const PORT = 50000;
-const HOST = 'localhost';
-
-const client = new net.Socket();
-
-client.connect(PORT, HOST, () => {
-    console.log('connected to server');
-    client.write('Hello World!');
-});
-
-client.on('data', (data: Buffer) => {
-    console.log('client-> ' + data.toString());
-    client.destroy();
-});
-
-client.on('close', () => {
-    console.log('client-> connection is closed');
-});
-
-client.on('error', (err: Error) => {
-    console.error('client-> error: ' + err.message);
-});
-
 server.c
+```c
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,11 +11,12 @@ server.c
 #define MAX_CLIENTS 100
 
 void broadcast_message(int sender_socket, char *message, int message_len, struct pollfd *fds, int client_count) {
-    for (int i = 1; i < client_count; ++i) {
+    for (int i = 1; i < client_count; ++i) { // Use correct 'i' in the loop
         if (fds[i].fd != sender_socket) {
             send(fds[i].fd, message, message_len, 0);
         }
     }
+    printf("Broadcast message from %d: %.*s\n", sender_socket, message_len, message);
 }
 
 int main(int argc, char **argv) {
@@ -109,8 +85,10 @@ int main(int argc, char **argv) {
                         }
                     }
                 } else {
+                    memset(recv_buf, 0, sizeof(recv_buf)); // Ensure buffer is cleared
                     recv_size = recv(fds[i].fd, recv_buf, sizeof(recv_buf), 0);
                     if (recv_size > 0) {
+                        printf("Received message: %.*s\n", recv_size, recv_buf); // Log received message
                         broadcast_message(fds[i].fd, recv_buf, recv_size, fds, client_count);
                     } else if (recv_size == 0) {
                         printf("Client disconnected\n");
@@ -129,11 +107,33 @@ int main(int argc, char **argv) {
     close(server_socket);
     return 0;
 }
-
-ts側で繋がったら、
-```javascript
-node client.js 
-connected to server
 ```
 
-となるが、serverの方にhello worldが表示されないのはどうして
+client.ts
+```typescript
+import * as net from 'net';
+
+const PORT = 50000;
+const HOST = 'localhost';
+
+const client = new net.Socket();
+
+client.connect(PORT, HOST, () => {
+    console.log('connected to server');
+    client.write('Hello 夏秋!');
+});
+
+client.on('data', (data: Buffer) => {
+    console.log('client-> ' + data.toString());
+    // Do not destroy the connection immediately; wait for server's response
+    //client.destroy();
+});
+
+client.on('close', () => {
+    console.log('client-> connection is closed');
+});
+
+client.on('error', (err: Error) => {
+    console.error('client-> error: ' + err.message);
+});
+```
